@@ -1,6 +1,7 @@
 import React from 'react';
 import { User, Mail, Bell, Shield, Laptop } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { cn } from '../lib/utils';
 
 export const Settings: React.FC = () => {
   const { user } = useAuth();
