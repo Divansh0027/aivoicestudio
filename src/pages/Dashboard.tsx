@@ -1,8 +1,11 @@
 import React from 'react';
 import { Plus, Play, Mic2, FolderOpen, Folder } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
       <div>
@@ -15,17 +18,20 @@ export const Dashboard: React.FC = () => {
         <QuickActionCard 
           icon={Mic2} 
           title="Create Voice" 
-          description="Clone a voice or design a new one" 
+          description="Clone a voice or design a new one"
+          onClick={() => navigate('/voices')}
         />
         <QuickActionCard 
           icon={Play} 
           title="Generate Speech" 
-          description="Synthesize text to audio" 
+          description="Synthesize text to audio"
+          onClick={() => navigate('/studio')}
         />
         <QuickActionCard 
           icon={FolderOpen} 
           title="New Project" 
-          description="Create a workspace" 
+          description="Create a workspace"
+          disabled
         />
       </div>
 
@@ -66,9 +72,13 @@ export const Dashboard: React.FC = () => {
   );
 };
 
-const QuickActionCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => {
+const QuickActionCard = ({ icon: Icon, title, description, onClick, disabled }: { icon: any, title: string, description: string, onClick?: () => void, disabled?: boolean }) => {
   return (
-    <button disabled className="group flex flex-col items-start gap-4 p-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 text-left transition-all hover:bg-zinc-800 hover:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
+    <button 
+      onClick={onClick}
+      disabled={disabled} 
+      className="group flex flex-col items-start gap-4 p-6 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 text-left transition-all hover:bg-zinc-800 hover:border-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
       <div className="p-3 rounded-xl bg-zinc-800/80 text-zinc-200 group-hover:bg-zinc-700 group-hover:text-zinc-100 transition-colors">
         <Icon className="h-5 w-5" />
       </div>
