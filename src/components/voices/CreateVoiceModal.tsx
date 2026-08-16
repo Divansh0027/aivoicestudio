@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Upload, Mic2, Wand2, Bot } from 'lucide-react';
 import { VoiceType, VoiceAttributes } from '../../types';
+import { generateSpeech } from '../../lib/mockVoiceProvider';
 
 interface CreateVoiceModalProps {
   isOpen: boolean;
@@ -32,6 +33,8 @@ export const CreateVoiceModal: React.FC<CreateVoiceModalProps> = ({ isOpen, onCl
   });
   const [isSaving, setIsSaving] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'queued' | 'processing' | 'completed'>('idle');
+  const [referenceFile, setReferenceFile] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -48,10 +51,13 @@ export const CreateVoiceModal: React.FC<CreateVoiceModalProps> = ({ isOpen, onCl
     resetAndClose();
   };
 
-  const handleTest = () => {
-    setTestStatus('queued');
-    setTimeout(() => setTestStatus('processing'), 800);
-    setTimeout(() => setTestStatus('completed'), 2800);
+  const handleTest = async () => {
+    if (testStatus !== 'idle') return;
+    await generateSpeech(
+      { text: "Hello, this is a test preview.", voiceId: "mock_preview", language },
+      (status) => setTestStatus(status)
+    );
+    setTimeout(() => setTestStatus('idle'), 2000);
   };
 
   const resetAndClose = () => {
@@ -59,6 +65,7 @@ export const CreateVoiceModal: React.FC<CreateVoiceModalProps> = ({ isOpen, onCl
     setType('cloned');
     setName('');
     setTestStatus('idle');
+    setReferenceFile(null);
     onClose();
   };
 
@@ -132,12 +139,38 @@ export const CreateVoiceModal: React.FC<CreateVoiceModalProps> = ({ isOpen, onCl
               {type === 'cloned' && (
                 <div className="pt-4 border-t border-zinc-800 space-y-4">
                   <h3 className="text-sm font-medium text-zinc-300">Reference Audio</h3>
-                  <div className="border-2 border-dashed border-zinc-800 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-zinc-900/30">
-                    <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3">
-                      <Upload className="h-5 w-5 text-zinc-400" />
-                    </div>
-                    <p className="text-sm font-medium text-zinc-200">Click to upload or drag and drop</p>
-                    <p className="text-xs text-zinc-500 mt-1">MP3, WAV up to 10MB (UI Mock only)</p>
+                  <div 
+                    className="border-2 border-dashed border-zinc-800 rounded-xl p-8 flex flex-col items-center justify-center text-center bg-zinc-900/30 cursor-pointer hover:bg-zinc-900/50 transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <input 
+                      type="file" 
+                      accept="audio/*" 
+                      className="hidden" 
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setReferenceFile(file.name);
+                      }}
+                    />
+                    {referenceFile ? (
+                      <div className="flex flex-col items-center w-full max-w-sm">
+                        <p className="text-sm font-medium text-zinc-200 mb-2">{referenceFile} selected</p>
+                        <div className="h-8 w-full flex items-center gap-0.5 opacity-50 mb-2 pointer-events-none">
+                          {[...Array(30)].map((_, i) => (
+                            <div key={i} className="flex-1 bg-zinc-500 rounded-full" style={{ height: `${Math.max(10, Math.random() * 100)}%` }}></div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center mb-3 pointer-events-none">
+                          <Upload className="h-5 w-5 text-zinc-400" />
+                        </div>
+                        <p className="text-sm font-medium text-zinc-200 pointer-events-none">Click to upload or drag and drop</p>
+                      </>
+                    )}
+                    <p className="text-xs text-zinc-500 mt-1 pointer-events-none">Mock/UI only — audio is not uploaded or processed</p>
                   </div>
                 </div>
               )}

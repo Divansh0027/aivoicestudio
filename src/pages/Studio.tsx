@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlayCircle, Settings2, Sparkles, Volume2, Download, Pause, Square, Play } from 'lucide-react';
+import { PlayCircle, Settings2, Sparkles, Volume2, Download, Pause, Square, Play, RefreshCw, Save } from 'lucide-react';
 import { Voice, VoiceAttributes, GenerationResult } from '../types';
 import { getVoices, generateSpeech } from '../lib/mockVoiceProvider';
 
@@ -31,6 +31,9 @@ export const Studio: React.FC = () => {
   
   const [generationStatus, setGenerationStatus] = useState<'idle' | 'queued' | 'processing' | 'completed'>('idle');
   const [result, setResult] = useState<GenerationResult | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     getVoices().then(data => {
@@ -54,13 +57,40 @@ export const Studio: React.FC = () => {
   const handleGenerate = async () => {
     if (!text.trim() || !selectedVoiceId) return;
     
+    setGenerationStatus('idle');
     setResult(null);
+    setIsPlaying(false);
+    setProgress(0);
     const mockResult = await generateSpeech(
       { text, voiceId: selectedVoiceId, language, attributes: isAdvanced ? attributes : undefined },
       (status) => setGenerationStatus(status)
     );
     setResult(mockResult);
-    setGenerationStatus('idle'); // Reset UI control status after completion
+    // Left as 'completed' to reflect state visibly
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && result) {
+      interval = setInterval(() => {
+        setProgress(p => {
+          const newProgress = p + 0.2;
+          if (newProgress >= (result.duration || 0)) {
+            setIsPlaying(false);
+            return result.duration || 0;
+          }
+          return newProgress;
+        });
+      }, 200);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, result]);
+
+  const togglePlay = () => {
+    if (progress >= (result?.duration || 0)) {
+      setProgress(0);
+    }
+    setIsPlaying(!isPlaying);
   };
 
   return (
@@ -195,10 +225,10 @@ export const Studio: React.FC = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={handleGenerate}
-              disabled={generationStatus !== 'idle' || !text.trim() || !selectedVoiceId}
+              disabled={['queued', 'processing'].includes(generationStatus) || !text.trim() || !selectedVoiceId}
               className="flex items-center gap-2 px-6 py-2.5 bg-zinc-100 text-zinc-900 rounded-lg font-medium text-sm hover:bg-white transition-colors disabled:opacity-50"
             >
-              {generationStatus === 'idle' ? (
+              {generationStatus === 'idle' || generationStatus === 'completed' ? (
                 <><PlayCircle className="h-4 w-4" /> Generate Speech</>
               ) : generationStatus === 'queued' ? (
                 'Queueing...'
@@ -217,24 +247,62 @@ export const Studio: React.FC = () => {
         {/* Result Player Mock */}
         {result && (
           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 flex items-center gap-4 animate-in slide-in-from-bottom-2 duration-300">
-            <button className="h-12 w-12 rounded-full bg-zinc-100 text-zinc-900 flex items-center justify-center shrink-0 hover:bg-white transition-colors">
-              <Play className="h-5 w-5 ml-1" />
+            <button 
+              onClick={togglePlay}
+              className="h-12 w-12 rounded-full bg-zinc-100 text-zinc-900 flex items-center justify-center shrink-0 hover:bg-white transition-colors"
+            >
+              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-1" />}
             </button>
             <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between text-xs font-medium">
                 <span className="text-zinc-300">Generated Output (Placeholder)</span>
-                <span className="text-zinc-500">0:00 / {result.duration}s</span>
+                <span className="text-zinc-500">
+                  {Math.floor(progress / 60)}:{(Math.floor(progress % 60)).toString().padStart(2, '0')} / {result.duration}s
+                </span>
               </div>
-              {/* Fake Waveform */}
-              <div className="h-8 w-full flex items-center gap-0.5 opacity-50">
-                {[...Array(40)].map((_, i) => (
-                  <div key={i} className="flex-1 bg-zinc-700 rounded-full" style={{ height: `${Math.max(10, Math.random() * 100)}%` }}></div>
-                ))}
+              {/* Fake Waveform / Seek Bar */}
+              <div className="relative h-8 w-full flex items-center">
+                <div className="absolute inset-0 flex items-center gap-0.5 opacity-50 pointer-events-none">
+                  {[...Array(40)].map((_, i) => (
+                    <div key={i} className="flex-1 bg-zinc-700 rounded-full" style={{ height: `${Math.max(10, Math.random() * 100)}%` }}></div>
+                  ))}
+                </div>
+                <div 
+                  className="absolute left-0 top-0 bottom-0 bg-blue-500/20 pointer-events-none transition-all duration-200" 
+                  style={{ width: `${(progress / (result.duration || 1)) * 100}%` }}
+                />
+                <input 
+                  type="range"
+                  min="0"
+                  max={result.duration || 100}
+                  step="0.1"
+                  value={progress}
+                  onChange={(e) => {
+                    setProgress(Number(e.target.value));
+                    if (Number(e.target.value) >= (result.duration || 0)) setIsPlaying(false);
+                  }}
+                  className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                />
               </div>
             </div>
             <div className="flex gap-2 shrink-0">
-              <button disabled className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors" title="Save to Project (Coming Soon)">
-                <Volume2 className="h-5 w-5" />
+              <button onClick={handleGenerate} className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors" title="Regenerate">
+                <RefreshCw className="h-5 w-5" />
+              </button>
+              <button 
+                onClick={() => {
+                  setIsSaved(true);
+                  setTimeout(() => setIsSaved(false), 2000);
+                }} 
+                className="relative p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors" 
+                title="Save (Mock)"
+              >
+                <Save className="h-5 w-5" />
+                {isSaved && (
+                  <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-zinc-100 text-xs px-2 py-1 rounded whitespace-nowrap border border-zinc-700 shadow-xl">
+                    Saved (mock)
+                  </span>
+                )}
               </button>
               <button disabled className="p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-lg transition-colors" title="Download (Coming Soon)">
                 <Download className="h-5 w-5" />
