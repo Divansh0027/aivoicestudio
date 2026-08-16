@@ -12,6 +12,15 @@ const EXPRESSIONS = [
   { tag: '[dissatisfaction-hnn]', label: 'Dissatisfaction' }
 ];
 
+const ATTRIBUTES = {
+  gender: ['Male', 'Female', 'Neutral'],
+  age: ['Child', 'Young Adult', 'Middle-aged', 'Senior'],
+  pitch: ['Very Low', 'Low', 'Default', 'High', 'Very High'],
+  style: ['Default', 'Whisper', 'Professional', 'Casual', 'Energetic'],
+  englishAccent: ['None', 'American', 'British', 'Australian', 'Indian'],
+  chineseDialect: ['None', 'Mandarin', 'Cantonese', 'Sichuanese'],
+};
+
 export const Studio: React.FC = () => {
   const [voices, setVoices] = useState<Voice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('');
@@ -117,35 +126,19 @@ export const Studio: React.FC = () => {
                   <h3 className="text-xs font-medium text-zinc-300">Voice Attributes Override</h3>
                 </div>
                 
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] text-zinc-500 mb-1 uppercase tracking-wider">Style</label>
-                    <select 
-                      value={attributes.style || 'Default'}
-                      onChange={e => setAttributes({...attributes, style: e.target.value})}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
-                    >
-                      <option>Default</option>
-                      <option>Whisper</option>
-                      <option>Professional</option>
-                      <option>Casual</option>
-                      <option>Energetic</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-zinc-500 mb-1 uppercase tracking-wider">Pitch</label>
-                    <select 
-                      value={attributes.pitch || 'Default'}
-                      onChange={e => setAttributes({...attributes, pitch: e.target.value})}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
-                    >
-                      <option>Very Low</option>
-                      <option>Low</option>
-                      <option>Default</option>
-                      <option>High</option>
-                      <option>Very High</option>
-                    </select>
-                  </div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                  {Object.entries(ATTRIBUTES).map(([key, options]) => (
+                    <div key={key}>
+                      <label className="block text-[11px] text-zinc-500 mb-1 uppercase tracking-wider">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
+                      <select 
+                        value={attributes[key as keyof VoiceAttributes] || ''}
+                        onChange={e => setAttributes({...attributes, [key]: e.target.value})}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-2 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-zinc-600"
+                      >
+                        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                      </select>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
